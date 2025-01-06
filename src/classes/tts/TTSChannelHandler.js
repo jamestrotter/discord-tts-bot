@@ -2,10 +2,12 @@
 const logger = require('@greencoast/logger');
 const { cleanMessage } = require('../../utils/mentions');
 const { getCantConnectToChannelReason } = require('../../utils/channel');
+const merge = require('deepmerge');
 
 class TTSChannelHandler {
   constructor(client) {
     this.client = client;
+    this.lastAnnounced = null;
   }
 
   initialize() {
@@ -35,14 +37,36 @@ class TTSChannelHandler {
     const ttsPlayer = this.client.getTTSPlayer(message.guild);
     const connection = ttsPlayer.voice.getConnection();
 
-    const settings = await this.client.ttsSettings.getCurrentForChannel(message.channel);
-    const extras = settings[channelSettings.provider];
+    const ttsSettingsPromise =  this.client.ttsSettings.getCurrentForChannel(message.channel);
+
+    //check to see if the user has their own voice set
+    
+    const messageAuthorMember = message.member
+    const memberSettingsPromise = this.client.ttsSettings.get(messageAuthorMember);
+
+    const ttsSettings = await ttsSettingsPromise;
+    const memberSettings = await memberSettingsPromise;
+    
+    let extras = ttsSettings[channelSettings.provider];
+    if(memberSettings[channelSettings.provider]){
+      extras = merge(ttsSettings[channelSettings.provider], memberSettings[channelSettings.provider]);
+    }
 
     const { members: { me: { voice: myVoice } }, name: guildName, members, channels, roles } = message.guild;
     const { channel: memberChannel } = message.member.voice;
     const myChannel = myVoice?.channel;
 
-    const messageIntro = this.client.config.get('ENABLE_WHO_SAID') ? `${message.member.displayName} said ` : '';
+    let messageIntro = '';
+    if(this.client.config.get('ENABLE_WHO_SAID')){this.lastAnnounced 
+      //check to see if we last announced this person, if we did don't re-announce
+      var senderId = messageAuthorMember.id;
+      if(this.lastAnnounced != senderId){
+        messageIntro = `${message.member.displayName} said `
+        this.lastAnnounced = senderId;
+      }
+      
+    }
+
     const textToSay = cleanMessage(`${messageIntro}${message.content}`, {
       members: members.cache,
       channels: channels.cache,

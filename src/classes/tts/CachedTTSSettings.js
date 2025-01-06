@@ -61,10 +61,17 @@ class CachedTTSSettings {
 
   async getCurrent(interaction) {
     const memberSettings = await this.get(interaction.member);
-    const guildSettings = await this.get(interaction.guild);
 
-    return merge.all([ProviderManager.DEFAULT_SETTINGS, guildSettings, memberSettings]);
+
+    return merge.all([getDefaults(interaction.guild), memberSettings]);
   }
+
+  async getDefaults(guild){
+    const guildSettings = await this.get(guild);
+
+    return merge.all([ProviderManager.DEFAULT_SETTINGS, guildSettings]);
+  }
+
 
   async getCurrentForGuild(guild) {
     const guildSettings = await this.get(guild);
