@@ -62,14 +62,13 @@ class CachedTTSSettings {
   async getCurrent(interaction) {
     const memberSettings = await this.get(interaction.member);
 
-
-    return merge.all([getDefaults(interaction.guild), memberSettings]);
+    return merge(await this.getDefaults(interaction.guild), memberSettings);
   }
 
   async getDefaults(guild){
     const guildSettings = await this.get(guild);
 
-    return merge.all([ProviderManager.DEFAULT_SETTINGS, guildSettings]);
+    return merge(ProviderManager.DEFAULT_SETTINGS, guildSettings);
   }
 
 
